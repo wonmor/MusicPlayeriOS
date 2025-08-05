@@ -8,14 +8,33 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+    @Environment(\.presentationMode) var mode: Binding<PresentationMode>
+
+       var body: some View {
+           VStack(spacing: 0) {
+
+           }
+           .appBar(title: "John Seong") {
+               self.mode.wrappedValue.dismiss()
+           }
+       }
+}
+
+extension View {
+    /// CommonAppBar
+    public func appBar(title: String, backButtonAction: @escaping() -> Void) -> some View {
+
+        self
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .navigationBarItems(leading: Button(action: {
+                backButtonAction()
+            }) {
+                Image("ic-back") // set backbutton image here
+                    .renderingMode(.template)
+                    .foregroundColor(.blue)
+            })
     }
 }
 
