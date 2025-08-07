@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 // MARK: - Models
 struct Song: Identifiable {
@@ -22,23 +23,63 @@ class PlayerViewModel: ObservableObject {
     @Published var currentSong: Song = Song(
         title: "Feeling Lonely",
         artist: "Boy Pablo",
-        artwork: "soy_pablo",
+        artwork: "profile",
         duration: 200
-    )
+    ) {
+        didSet {
+            progress = 0.0
+        }
+    }
     @Published var isPlaying: Bool = false
     @Published var progress: Double = 0.0
 
+    private var timer: AnyCancellable?
+
     // Sample data
     let albums: [Album] = [
-        Album(title: "Soy Pablo", artwork: "soy_pablo", year: "2018"),
-        Album(title: "Wachito Rico", artwork: "wachito_rico", year: "2020")
+        Album(title: "Soy Pablo", artwork: "profile", year: "2018"),
+        Album(title: "Wachito Rico", artwork: "profile", year: "2020")
     ]
     let songs: [Song] = [
-        Song(title: "Sick Feeling", artist: "Soy Pablo", artwork: "soy_pablo", duration: 220),
-        Song(title: "EveryTime", artist: "Soy Pablo", artwork: "soy_pablo", duration: 185),
-        Song(title: "Feeling Lonely", artist: "Soy Pablo", artwork: "soy_pablo", duration: 200),
-        Song(title: "Honey", artist: "Soy Pablo", artwork: "soy_pablo", duration: 205)
+        Song(title: "Sick Feeling", artist: "Soy Pablo", artwork: "profile", duration: 220),
+        Song(title: "EveryTime", artist: "Soy Pablo", artwork: "profile", duration: 185),
+        Song(title: "Feeling Lonely", artist: "Soy Pablo", artwork: "profile", duration: 200),
+        Song(title: "Honey", artist: "Soy Pablo", artwork: "profile", duration: 205)
     ]
+
+    init() {
+        // Observe play state to start/stop timer
+        $isPlaying
+            .sink { [weak self] playing in
+                if playing {
+                    self?.startTimer()
+                } else {
+                    self?.stopTimer()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private var cancellables = Set<AnyCancellable>()
+
+    private func startTimer() {
+        stopTimer()
+        timer = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                if self.progress < self.currentSong.duration {
+                    self.progress += 1.0
+                } else {
+                    self.isPlaying = false
+                }
+            }
+    }
+
+    private func stopTimer() {
+        timer?.cancel()
+        timer = nil
+    }
 }
 
 // MARK: - ContentView
@@ -58,7 +99,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 ArtistHeaderView()
                 Picker("Tab", selection: $selectedTab) {
-                    ForEach(Tab.allCases, id: \ .self) { tab in
+                    ForEach(Tab.allCases, id: \.self) { tab in
                         Text(tab.rawValue).tag(tab)
                     }
                 }
@@ -80,7 +121,6 @@ struct ContentView: View {
             }
             .background(Color(.systemBackground).ignoresSafeArea())
 
-            // Mini / Full Player
             if vm.isExpanded {
                 FullPlayerView(vm: vm, animation: animation)
                     .transition(.move(edge: .bottom))
@@ -146,7 +186,7 @@ struct AlbumGridView: View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(albums) { album in
                 VStack(alignment: .leading) {
-                    Image(album.artwork)
+                    Image("profile")
                         .resizable()
                         .aspectRatio(1, contentMode: .fill)
                         .cornerRadius(8)
@@ -168,7 +208,7 @@ struct SongListView: View {
         VStack(spacing: 12) {
             ForEach(songs) { song in
                 HStack {
-                    Image(song.artwork)
+                    Image("profile")
                         .resizable()
                         .frame(width: 40, height: 40)
                         .cornerRadius(4)
@@ -199,15 +239,13 @@ struct SongListView: View {
 }
 
 // MARK: - Mini & Full Player
-// (Same as your existing mini/full player code)
-
 struct MiniPlayerView: View {
     @ObservedObject var vm: PlayerViewModel
     var animation: Namespace.ID
 
     var body: some View {
         HStack(spacing: 16) {
-            Image(vm.currentSong.artwork)
+            Image("profile")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 50, height: 50)
@@ -257,7 +295,7 @@ struct FullPlayerView: View {
 
             Spacer()
 
-            Image(vm.currentSong.artwork)
+            Image("profile")
                 .resizable()
                 .aspectRatio(1, contentMode: .fit)
                 .cornerRadius(12)
