@@ -48,7 +48,11 @@ class RetroPlayerViewModel: ObservableObject {
     @Published var menuStack: [MenuScreen] = []
     @Published var selectedIndex: Int = 0
     @Published var currentSong: Song
-    @Published var isPlaying: Bool = false
+    @Published var isPlaying: Bool = false {
+        didSet {
+            if isPlaying { startTimer() } else { stopTimer() }
+        }
+    }
     @Published var progress: Double = 0.0
     @Published var volume: Double = 0.5
     @Published var backlightOn: Bool = true
@@ -63,7 +67,6 @@ class RetroPlayerViewModel: ObservableObject {
     var gameSelectHandler: (() -> Void)?
 
     private var timer: AnyCancellable?
-    private var cancellables = Set<AnyCancellable>()
     private let haptic = UIImpactFeedbackGenerator(style: .light)
     private let player = ApplicationMusicPlayer.shared
 
@@ -86,20 +89,14 @@ class RetroPlayerViewModel: ObservableObject {
         currentSong = samples[0]
         songs = samples
         albums = Self.sampleAlbums
-
-        $isPlaying
-            .sink { [weak self] playing in
-                if playing { self?.startTimer() } else { self?.stopTimer() }
-            }
-            .store(in: &cancellables)
     }
 
     // MARK: MusicKit
 
     func requestMusicAuthorization() {
-        Task {
-            let status = await MusicAuthorization.request()
-            await MainActor.run {
+        Task { @MainActor in
+            do {
+                let status = await MusicAuthorization.request()
                 self.musicAuthorized = (status == .authorized)
                 if self.musicAuthorized {
                     self.loadLibrary()
@@ -335,6 +332,8 @@ class RetroPlayerViewModel: ObservableObject {
         guard index < songs.count else { return }
         currentSong = songs[index]
         progress = 0
+        // Force restart timer even if already playing
+        stopTimer()
         isPlaying = true
 
         if let mkSong = currentSong.musicKitSong {
