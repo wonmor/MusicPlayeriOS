@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iRetroMusic - Retro Music Player for iOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            line-height: 1.6;
+        }
+        .hero {
+            text-align: center;
+            padding: 80px 20px 60px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0a0a0a 100%);
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+        .hero h1 span { color: #4a90d9; }
+        .hero .tagline {
+            font-size: 1.3rem;
+            color: #888;
+            margin-bottom: 40px;
+        }
+        .device-preview {
+            width: 220px;
+            height: 380px;
+            margin: 0 auto 40px;
+            background: linear-gradient(135deg, #c0c0c4, #a0a0a4);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .device-screen {
+            width: 180px;
+            height: 140px;
+            background: #fff;
+            border-radius: 6px;
+            border: 3px solid #222;
+            overflow: hidden;
+        }
+        .screen-status {
+            background: linear-gradient(180deg, #b8bcc4, #a0a4ac);
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        .screen-menu { padding: 4px 0; }
+        .menu-item {
+            padding: 4px 8px;
+            font-size: 9px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+        }
+        .menu-item.active {
+            background: linear-gradient(180deg, #3070e0, #2558c0);
+            color: #fff;
+        }
+        .menu-item .chevron { font-size: 8px; }
+        .click-wheel {
+            width: 140px;
+            height: 140px;
+            background: radial-gradient(circle, #e0e0e0, #c0c0c0);
+            border-radius: 50%;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .wheel-center {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #f5f5f5, #ddd);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .wheel-label {
+            position: absolute;
+            font-size: 7px;
+            font-weight: 700;
+            color: #777;
+        }
+        .wheel-label.top { top: 12px; }
+        .wheel-label.bottom { bottom: 12px; }
+        .badge-row {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .app-store-badge {
+            display: inline-block;
+            background: #fff;
+            color: #000;
+            padding: 10px 24px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: transform 0.2s;
+        }
+        .app-store-badge:hover { transform: scale(1.05); }
+        .features {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 40px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        .feature-card {
+            background: #151520;
+            border-radius: 16px;
+            padding: 28px;
+            border: 1px solid #222;
+        }
+        .feature-card .icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+        .feature-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        .feature-card p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .ipad-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px;
+            text-align: center;
+        }
+        .ipad-section h2 {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+        .ipad-section p {
+            color: #888;
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        .ipad-preview {
+            background: #1a1a1e;
+            border-radius: 12px;
+            border: 1px solid #333;
+            padding: 20px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .ipad-toolbar {
+            background: linear-gradient(180deg, #d8d8dc, #c0c0c4);
+            border-radius: 6px 6px 0 0;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 6px;
+        }
+        .tb-btn {
+            width: 22px; height: 18px;
+            background: linear-gradient(180deg, #f0f0f0, #d0d0d0);
+            border-radius: 3px;
+            border: 1px solid #aaa;
+        }
+        .ipad-content {
+            display: flex;
+            background: #f0f0f2;
+            border-radius: 0 0 6px 6px;
+            min-height: 180px;
+        }
+        .ipad-sidebar {
+            width: 120px;
+            background: #e4e5e8;
+            padding: 12px 8px;
+            border-radius: 0 0 0 6px;
+        }
+        .sb-item {
+            font-size: 9px;
+            padding: 4px 6px;
+            color: #333;
+            border-radius: 4px;
+            margin-bottom: 2px;
+        }
+        .sb-item.active {
+            background: #3478f6;
+            color: #fff;
+        }
+        .ipad-list {
+            flex: 1;
+            padding: 8px;
+        }
+        .list-header {
+            display: flex;
+            font-size: 8px;
+            color: #888;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .list-row {
+            display: flex;
+            font-size: 9px;
+            padding: 5px 8px;
+            color: #333;
+        }
+        .list-row:nth-child(even) { background: #e8e8ea; }
+        .list-row .name { flex: 1; }
+        .list-row .artist { width: 120px; color: #666; }
+        .list-row .time { width: 40px; text-align: right; color: #666; }
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid #222;
+            color: #555;
+            font-size: 0.85rem;
+        }
+        footer a {
+            color: #4a90d9;
+            text-decoration: none;
+        }
+        footer a:hover { text-decoration: underline; }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>i<span>Retro</span>Music</h1>
+        <p class="tagline">The classic music experience, reimagined for iOS.</p>
+
+        <div class="device-preview">
+            <div class="device-screen">
+                <div class="screen-status">iRetroMusic</div>
+                <div class="screen-menu">
+                    <div class="menu-item active">Music <span class="chevron">&#9654;</span></div>
+                    <div class="menu-item">Extras <span class="chevron">&#9654;</span></div>
+                    <div class="menu-item">Settings <span class="chevron">&#9654;</span></div>
+                    <div class="menu-item">Shuffle Songs <span class="chevron">&#9654;</span></div>
+                </div>
+            </div>
+            <div class="click-wheel">
+                <span class="wheel-label top">MENU</span>
+                <span class="wheel-label bottom">&#9654;&#10073;&#10073;</span>
+                <div class="wheel-center"></div>
+            </div>
+        </div>
+
+        <div class="badge-row">
+            <a href="#" class="app-store-badge">Download on the App Store</a>
+        </div>
+    </div>
+
+    <div class="features">
+        <h2>Nostalgia meets modern music</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="icon">&#127925;</div>
+                <h3>Apple Music Integration</h3>
+                <p>Browse and play your entire Apple Music library through the retro click wheel interface. Real playback, real music.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128260;</div>
+                <h3>Click Wheel Controls</h3>
+                <p>Scroll through menus, skip tracks, and control playback with the authentic touch-based click wheel with haptic feedback.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#127918;</div>
+                <h3>Retro Games</h3>
+                <p>Play classic games like Vortex, a brick-breaker game controlled entirely through the click wheel. Just like the old days.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128187;</div>
+                <h3>iPad Music Manager</h3>
+                <p>On iPad, enjoy a classic desktop music manager interface with sidebar navigation, column browser, and search.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#127912;</div>
+                <h3>Authentic Design</h3>
+                <p>Silver metallic body, LCD screen with status bar, blue menu highlights, and the iconic click wheel layout.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128272;</div>
+                <h3>Privacy First</h3>
+                <p>iRetroMusic only accesses your music library. No data is collected, stored, or shared. Ever.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="ipad-section">
+        <h2>Classic manager on iPad</h2>
+        <p>A full desktop-style music manager with sidebar, column headers, search, and playback controls.</p>
+        <div class="ipad-preview">
+            <div class="ipad-toolbar">
+                <div class="tb-btn"></div>
+                <div class="tb-btn"></div>
+                <div class="tb-btn"></div>
+            </div>
+            <div class="ipad-content">
+                <div class="ipad-sidebar">
+                    <div style="font-size:8px;color:#888;font-weight:700;margin-bottom:4px;">LIBRARY</div>
+                    <div class="sb-item active">Songs</div>
+                    <div class="sb-item">Albums</div>
+                    <div class="sb-item">Artists</div>
+                    <div class="sb-item">Genres</div>
+                </div>
+                <div class="ipad-list">
+                    <div class="list-header">
+                        <span class="name">Name</span>
+                        <span class="artist">Artist</span>
+                        <span class="time">Time</span>
+                    </div>
+                    <div class="list-row"><span class="name">Feeling Lonely</span><span class="artist">Boy Pablo</span><span class="time">3:20</span></div>
+                    <div class="list-row"><span class="name">Everytime</span><span class="artist">Boy Pablo</span><span class="time">3:05</span></div>
+                    <div class="list-row"><span class="name">Sick Feeling</span><span class="artist">Boy Pablo</span><span class="time">3:40</span></div>
+                    <div class="list-row"><span class="name">Dance, Baby!</span><span class="artist">Boy Pablo</span><span class="time">3:19</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-links">
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="support.html">Support</a>
+            <a href="https://github.com/wonmor/MusicPlayeriOS">GitHub</a>
+        </div>
+        <p>&copy; 2026 John Seong. All rights reserved.</p>
+    </footer>
+</body>
+</html>
