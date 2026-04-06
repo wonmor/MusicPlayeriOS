@@ -33,6 +33,10 @@ enum MenuScreen: Equatable {
     case extras
     case games
     case vortex
+    case solitaire
+    case quiz
+    case clock
+    case stopwatch
     case settings
     case about
 }
@@ -63,8 +67,25 @@ class RetroPlayerViewModel: ObservableObject {
     private let haptic = UIImpactFeedbackGenerator(style: .light)
     private let player = ApplicationMusicPlayer.shared
 
+    static let sampleSongs: [Song] = [
+        Song(title: "Midnight Drive", artist: "Neon Waves", artwork: "profile", duration: 214),
+        Song(title: "Sunlit Morning", artist: "Pastel Skies", artwork: "profile", duration: 197),
+        Song(title: "Ocean Breeze", artist: "Coral Drift", artwork: "profile", duration: 223),
+        Song(title: "City Lights", artist: "Neon Waves", artwork: "profile", duration: 185),
+        Song(title: "Golden Hour", artist: "Pastel Skies", artwork: "profile", duration: 201),
+        Song(title: "Starfall", artist: "Coral Drift", artwork: "profile", duration: 190),
+    ]
+
+    static let sampleAlbums: [Album] = [
+        Album(title: "Electric Dreams", artwork: "profile", year: "2024"),
+        Album(title: "Coastal", artwork: "profile", year: "2025"),
+    ]
+
     init() {
-        currentSong = Song(title: "No Music", artist: "Connect Apple Music", artwork: "", duration: 0)
+        let samples = Self.sampleSongs
+        currentSong = samples[0]
+        songs = samples
+        albums = Self.sampleAlbums
 
         $isPlaying
             .sink { [weak self] playing in
@@ -90,14 +111,13 @@ class RetroPlayerViewModel: ObservableObject {
     func loadLibrary() {
         Task {
             do {
-                // Load songs
                 var songRequest = MusicLibraryRequest<MusicKit.Song>()
                 songRequest.limit = 100
                 songRequest.sort(by: \.title, ascending: true)
                 let songResponse = try await songRequest.response()
 
                 let libSongs: [Song] = songResponse.items.map { mkSong in
-                    let artURL = mkSong.artwork?.url(width: 200, height: 200)
+                    let artURL = mkSong.artwork?.url(width: 300, height: 300)
                     return Song(
                         title: mkSong.title,
                         artist: mkSong.artistName,
@@ -108,14 +128,13 @@ class RetroPlayerViewModel: ObservableObject {
                     )
                 }
 
-                // Load albums
                 var albumRequest = MusicLibraryRequest<MusicKit.Album>()
                 albumRequest.limit = 50
                 albumRequest.sort(by: \.title, ascending: true)
                 let albumResponse = try await albumRequest.response()
 
                 let libAlbums: [Album] = albumResponse.items.map { mkAlbum in
-                    let artURL = mkAlbum.artwork?.url(width: 200, height: 200)
+                    let artURL = mkAlbum.artwork?.url(width: 300, height: 300)
                     let year = mkAlbum.releaseDate.map { String(Calendar.current.component(.year, from: $0)) } ?? ""
                     return Album(
                         title: mkAlbum.title,
@@ -195,6 +214,10 @@ class RetroPlayerViewModel: ObservableObject {
         case .extras: return "Extras"
         case .games: return "Games"
         case .vortex: return "Vortex"
+        case .solitaire: return "Solitaire"
+        case .quiz: return "Quiz"
+        case .clock: return "Clock"
+        case .stopwatch: return "Stopwatch"
         case .settings: return "Settings"
         case .about: return "About"
         }
@@ -203,7 +226,7 @@ class RetroPlayerViewModel: ObservableObject {
     var maxIndex: Int {
         switch currentScreen {
         case .songs: return max(0, songs.count - 1)
-        case .nowPlaying, .vortex, .about: return 0
+        case .nowPlaying, .vortex, .solitaire, .quiz, .clock, .stopwatch, .about: return 0
         default: return max(0, menuItems.count - 1)
         }
     }
@@ -212,7 +235,8 @@ class RetroPlayerViewModel: ObservableObject {
 
     func select() {
         haptic.impactOccurred()
-        if currentScreen == .vortex {
+        if currentScreen == .vortex || currentScreen == .solitaire
+            || currentScreen == .stopwatch || currentScreen == .quiz {
             gameSelectHandler?()
             return
         }
@@ -236,9 +260,19 @@ class RetroPlayerViewModel: ObservableObject {
             playSong(at: selectedIndex)
             navigateTo(.nowPlaying)
         case .extras:
-            if selectedIndex == 0 { navigateTo(.games) }
+            switch selectedIndex {
+            case 0: navigateTo(.games)
+            case 1: navigateTo(.clock)
+            case 2: navigateTo(.stopwatch)
+            default: break
+            }
         case .games:
-            if selectedIndex == 0 { navigateTo(.vortex) }
+            switch selectedIndex {
+            case 0: navigateTo(.vortex)
+            case 1: navigateTo(.solitaire)
+            case 2: navigateTo(.quiz)
+            default: break
+            }
         case .settings:
             switch selectedIndex {
             case 0: navigateTo(.about)
@@ -266,12 +300,14 @@ class RetroPlayerViewModel: ObservableObject {
     }
 
     func scrollUp() {
-        if currentScreen == .vortex {
+        if currentScreen == .vortex || currentScreen == .solitaire {
             gameScrollHandler?(-1)
             haptic.impactOccurred()
             return
         }
-        guard currentScreen != .nowPlaying && currentScreen != .about else { return }
+        guard currentScreen != .nowPlaying && currentScreen != .about
+                && currentScreen != .clock && currentScreen != .stopwatch
+                && currentScreen != .quiz else { return }
         if selectedIndex > 0 {
             selectedIndex -= 1
             haptic.impactOccurred()
@@ -279,12 +315,14 @@ class RetroPlayerViewModel: ObservableObject {
     }
 
     func scrollDown() {
-        if currentScreen == .vortex {
+        if currentScreen == .vortex || currentScreen == .solitaire {
             gameScrollHandler?(1)
             haptic.impactOccurred()
             return
         }
-        guard currentScreen != .nowPlaying && currentScreen != .about else { return }
+        guard currentScreen != .nowPlaying && currentScreen != .about
+                && currentScreen != .clock && currentScreen != .stopwatch
+                && currentScreen != .quiz else { return }
         if selectedIndex < maxIndex {
             selectedIndex += 1
             haptic.impactOccurred()
@@ -982,6 +1020,14 @@ struct ScreenView: View {
                     NowPlayingScreenView(vm: vm)
                 case .vortex:
                     VortexGameView(vm: vm)
+                case .solitaire:
+                    SolitaireGameView(vm: vm)
+                case .quiz:
+                    QuizGameView(vm: vm)
+                case .clock:
+                    ClockScreenView()
+                case .stopwatch:
+                    StopwatchScreenView(vm: vm)
                 case .about:
                     AboutScreenView(musicAuthorized: vm.musicAuthorized)
                 }
