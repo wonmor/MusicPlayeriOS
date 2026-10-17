@@ -1,39 +1,49 @@
-# RetroPlayer
+# iRetroMusic
 
-A retro portable music player simulator for iOS, built entirely in SwiftUI. Features a functional click wheel interface, hierarchical menu system, music playback simulation, and classic retro games.
+A cassette-era portable music player for iOS, built entirely in SwiftUI. Features a cassette-deck style tactile-button interface, hierarchical menu system, Apple Music playback, and classic retro games.
+
+## Screenshots
+
+| Main Menu | Now Playing | Clock |
+|---|---|---|
+| ![Main Menu](screenshots/iphone/01-main-menu.png) | ![Now Playing](screenshots/iphone/02-now-playing.png) | ![Clock](screenshots/iphone/03-clock.png) |
+
+| Stopwatch | Vortex | Quiz |
+|---|---|---|
+| ![Stopwatch](screenshots/iphone/04-stopwatch.png) | ![Vortex](screenshots/iphone/05-vortex.png) | ![Quiz](screenshots/iphone/06-quiz.png) |
 
 ## Features
 
-### Click Wheel Interface
-- **Rotate** the wheel ring clockwise/counter-clockwise to scroll through menus
-- **MENU** (top) — navigate back
-- **Play/Pause** (bottom) — toggle music playback
-- **Previous/Next** (left/right) — skip tracks
-- **Center button** — select/confirm
+### Cassette Deck Tactile Controls
+- **Up / Down** — scroll through menus
+- **OK** — select / confirm
+- **BACK** — return to previous menu
+- **Prev / Play-Pause / Next** — transport row for playback control
 - Haptic feedback on every interaction
+- Animated cassette-tape window that spins while playing
 
 ### Music Player
-- Browse songs and albums through a classic menu hierarchy
+- Browse your Apple Music library by song or album
 - Now Playing screen with album artwork, progress bar, and volume indicator
 - Track-to-track advancement and shuffle mode
-- Simulated playback with timer-based progress
+- Real playback via MusicKit
 
 ### Retro Games
-- **Vortex** — a brick breaker game controlled entirely via the click wheel
-  - Rotate the wheel to move the paddle
-  - Press Select to launch the ball
-  - 5 rows of color-coded bricks, 3 lives, score tracking
+- **Vortex** — a brick-breaker game controlled by the navigation buttons
+- **Solitaire** — card-matching memory game
+- **Quiz** — music trivia
+- **Clock** and **Stopwatch** utilities
 
-### Device Simulation
-- Silver metallic body with gradient finish
-- Black-bezeled LCD screen with status bar
-- Battery indicator and playback status icons
-- Backlight toggle in Settings
+### Device Aesthetic
+- Warm orange-and-cream cassette-player body with embossed brand strip
+- Vintage-LCD-tinted screen with cassette-style "REC / STBY" status indicator
+- Tactile dark-plastic buttons with press animation
+- iPad layout: tabbed card-grid library (Tracks / Albums / Player) with mini-player bar
 
 ## Requirements
 
-- iOS 16.0+
-- Xcode 15.0+
+- iOS 18.5+
+- Xcode 16.0+
 - Swift 5.9+
 
 ## Getting Started
@@ -46,9 +56,11 @@ A retro portable music player simulator for iOS, built entirely in SwiftUI. Feat
 
 - **SwiftUI** — entire UI layer
 - **Combine** — reactive state management and timers
+- **MusicKit** — Apple Music library access and playback
 - **MVVM** — `RetroPlayerViewModel` manages all navigation, playback, and menu state
-- Single `ContentView.swift` contains the device shell, click wheel, and all screen views
-- `VortexGameView.swift` contains the brick breaker game engine and rendering
+- `ContentView.swift` contains the device shell, controls, and screen views
+- `ExtrasViews.swift` contains Clock, Stopwatch, Solitaire, and Quiz
+- `VortexGameView.swift` contains the brick-breaker game engine
 
 ## License
 

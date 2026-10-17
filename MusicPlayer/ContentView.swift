@@ -89,6 +89,31 @@ class RetroPlayerViewModel: ObservableObject {
         currentSong = samples[0]
         songs = samples
         albums = Self.sampleAlbums
+        applyLaunchScreenOverride()
+    }
+
+    /// Screenshot/UI-test aid: launching with `-ui-screen <name>` opens that screen directly
+    /// (nowPlaying, songs, albums, about, settings, extras, clock, stopwatch, vortex, quiz).
+    static var isScreenshotLaunch: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-screen")
+    }
+
+    private func applyLaunchScreenOverride() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-ui-screen"), i + 1 < args.count else { return }
+        switch args[i + 1] {
+        case "nowPlaying": menuStack = [.main]; currentScreen = .nowPlaying; progress = 72
+        case "songs": menuStack = [.main, .music]; currentScreen = .songs
+        case "albums": menuStack = [.main, .music]; currentScreen = .albums
+        case "about": menuStack = [.main, .settings]; currentScreen = .about
+        case "settings": menuStack = [.main]; currentScreen = .settings
+        case "extras": menuStack = [.main]; currentScreen = .extras
+        case "clock": menuStack = [.main, .extras]; currentScreen = .clock
+        case "stopwatch": menuStack = [.main, .extras]; currentScreen = .stopwatch
+        case "vortex": menuStack = [.main, .extras, .games]; currentScreen = .vortex
+        case "quiz": menuStack = [.main, .extras, .games]; currentScreen = .quiz
+        default: break
+        }
     }
 
     // MARK: MusicKit
@@ -203,7 +228,7 @@ class RetroPlayerViewModel: ObservableObject {
 
     var screenTitle: String {
         switch currentScreen {
-        case .main: return "RetroPlayer"
+        case .main: return "iRetroMusic"
         case .music: return "Music"
         case .songs: return "Songs"
         case .albums: return "Albums"
@@ -438,551 +463,788 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            vm.requestMusicAuthorization()
+            if !RetroPlayerViewModel.isScreenshotLaunch { vm.requestMusicAuthorization() }
         }
     }
 }
 
-// MARK: - iPhone: Retro Device
+// MARK: - iPhone: Cassette Deck Player
 
 struct RetroDeviceView: View {
     @ObservedObject var vm: RetroPlayerViewModel
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            LinearGradient(
+                colors: [Color(red: 0.10, green: 0.07, blue: 0.05), Color(red: 0.05, green: 0.04, blue: 0.03)],
+                startPoint: .top, endPoint: .bottom
+            ).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 10)
+                Spacer(minLength: 6)
 
-                VStack(spacing: 20) {
+                VStack(spacing: 12) {
+                    DeckBrandStrip(isPlaying: vm.isPlaying)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 14)
+
+                    CassetteWindowView(isPlaying: vm.isPlaying)
+                        .frame(height: 64)
+                        .padding(.horizontal, 18)
+
                     ScreenView(vm: vm)
-                        .frame(height: 260)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
+                        .frame(height: 200)
+                        .padding(.horizontal, 18)
 
-                    Spacer(minLength: 8)
+                    NavButtonRow(vm: vm)
+                        .padding(.horizontal, 18)
 
-                    ClickWheelView(
-                        onScroll: { direction in
-                            if direction > 0 { vm.scrollDown() } else { vm.scrollUp() }
-                        },
-                        onCenter: { vm.select() },
-                        onMenu: { vm.goBack() },
-                        onPlay: { vm.togglePlayPause() },
-                        onNext: { vm.nextTrack() },
-                        onPrevious: { vm.previousTrack() }
-                    )
-                    .padding(.bottom, 28)
+                    TransportButtonRow(vm: vm)
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 16)
                 }
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 340)
                 .background(
-                    RoundedRectangle(cornerRadius: 28)
+                    RoundedRectangle(cornerRadius: 22)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color(red: 0.85, green: 0.85, blue: 0.87),
-                                    Color(red: 0.75, green: 0.75, blue: 0.77),
+                                    Color(red: 0.97, green: 0.65, blue: 0.25),
+                                    Color(red: 0.85, green: 0.48, blue: 0.15),
                                 ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                startPoint: .topLeading, endPoint: .bottomTrailing
                             )
                         )
-                        .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22)
+                                .stroke(Color(red: 0.35, green: 0.16, blue: 0.04), lineWidth: 1.5)
+                        )
+                        .shadow(color: .black.opacity(0.55), radius: 18, y: 10)
                 )
 
-                Spacer(minLength: 10)
+                Spacer(minLength: 6)
             }
         }
         .preferredColorScheme(.dark)
     }
 }
 
-// MARK: - iPad: Classic Music Manager
+// MARK: - Cassette Deck Components
+
+struct DeckBrandStrip: View {
+    let isPlaying: Bool
+
+    var body: some View {
+        HStack {
+            Text("iRetroMusic")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+                .foregroundColor(Color(red: 0.30, green: 0.12, blue: 0.04))
+                .tracking(1)
+            Spacer()
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(isPlaying ? Color(red: 0.95, green: 0.20, blue: 0.10) : Color.black.opacity(0.45))
+                    .frame(width: 7, height: 7)
+                    .shadow(color: isPlaying ? Color(red: 1, green: 0.3, blue: 0.1) : .clear, radius: 4)
+                Text("PWR")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.30, green: 0.12, blue: 0.04))
+            }
+        }
+    }
+}
+
+struct CassetteWindowView: View {
+    let isPlaying: Bool
+    @State private var rotation: Double = 0
+    @State private var animTimer: Timer?
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.85), Color.black.opacity(0.72)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(red: 0.30, green: 0.12, blue: 0.04), lineWidth: 1.5)
+                )
+
+            Rectangle()
+                .fill(Color(red: 0.45, green: 0.28, blue: 0.10))
+                .frame(height: 4)
+                .offset(y: 8)
+
+            HStack(spacing: 56) {
+                CassetteReel(angle: rotation)
+                CassetteReel(angle: rotation)
+            }
+        }
+        .onAppear { updateAnimation() }
+        .onChange(of: isPlaying) { _ in updateAnimation() }
+        .onDisappear {
+            animTimer?.invalidate()
+            animTimer = nil
+        }
+    }
+
+    private func updateAnimation() {
+        animTimer?.invalidate()
+        if isPlaying {
+            animTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { _ in
+                rotation = (rotation + 6).truncatingRemainder(dividingBy: 360)
+            }
+        } else {
+            animTimer = nil
+        }
+    }
+}
+
+struct CassetteReel: View {
+    let angle: Double
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color(red: 0.50, green: 0.30, blue: 0.15), lineWidth: 1)
+                .frame(width: 34, height: 34)
+            Circle()
+                .fill(Color(red: 0.18, green: 0.10, blue: 0.04))
+                .frame(width: 26, height: 26)
+            ForEach(0..<6, id: \.self) { i in
+                Rectangle()
+                    .fill(Color(red: 0.55, green: 0.35, blue: 0.18))
+                    .frame(width: 1.5, height: 18)
+                    .rotationEffect(.degrees(Double(i) * 30))
+            }
+            Circle()
+                .fill(Color(red: 0.40, green: 0.22, blue: 0.10))
+                .frame(width: 6, height: 6)
+        }
+        .rotationEffect(.degrees(angle))
+    }
+}
+
+struct DeckButton: View {
+    let label: String?
+    let icon: String?
+    let action: () -> Void
+    var width: CGFloat = 56
+    var height: CGFloat = 40
+    var prominent: Bool = false
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(
+                        LinearGradient(
+                            colors: prominent
+                                ? [Color(red: 0.32, green: 0.20, blue: 0.10), Color(red: 0.18, green: 0.10, blue: 0.05)]
+                                : [Color(red: 0.22, green: 0.14, blue: 0.08), Color(red: 0.12, green: 0.07, blue: 0.04)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .stroke(Color.black.opacity(0.7), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.45), radius: 2, y: 2)
+
+                if let label {
+                    Text(label)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 0.95, green: 0.92, blue: 0.85))
+                        .tracking(0.5)
+                }
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(Color(red: 0.95, green: 0.92, blue: 0.85))
+                }
+            }
+            .frame(width: width, height: height)
+        }
+        .buttonStyle(DeckPressStyle())
+    }
+}
+
+struct DeckPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+struct NavButtonRow: View {
+    @ObservedObject var vm: RetroPlayerViewModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            DeckButton(label: nil, icon: "chevron.up",
+                          action: { vm.scrollUp() }, width: 60, height: 40)
+            DeckButton(label: "OK", icon: nil,
+                          action: { vm.select() }, width: 76, height: 40, prominent: true)
+            DeckButton(label: nil, icon: "chevron.down",
+                          action: { vm.scrollDown() }, width: 60, height: 40)
+            DeckButton(label: "BACK", icon: nil,
+                          action: { vm.goBack() }, width: 60, height: 40)
+        }
+    }
+}
+
+struct TransportButtonRow: View {
+    @ObservedObject var vm: RetroPlayerViewModel
+
+    var body: some View {
+        HStack(spacing: 10) {
+            DeckButton(label: nil, icon: "backward.fill",
+                          action: { vm.previousTrack() }, width: 72, height: 46)
+            DeckButton(label: nil, icon: vm.isPlaying ? "pause.fill" : "play.fill",
+                          action: { vm.togglePlayPause() }, width: 96, height: 46, prominent: true)
+            DeckButton(label: nil, icon: "forward.fill",
+                          action: { vm.nextTrack() }, width: 72, height: 46)
+        }
+    }
+}
+
+// MARK: - iPad: Card Grid Library
 
 struct ClassicManagerView: View {
     @ObservedObject var vm: RetroPlayerViewModel
-    @State private var selectedSidebarItem: SidebarItem = .songs
+    @State private var selectedTab: GridTab = .songs
     @State private var searchText: String = ""
-    @State private var selectedSongIndex: Int? = nil
 
-    enum SidebarItem: String, CaseIterable {
-        case songs = "Songs"
+    enum GridTab: String, CaseIterable {
+        case songs = "Tracks"
         case albums = "Albums"
-        case artists = "Artists"
-        case genres = "Genres"
-        case recentlyAdded = "Recently Added"
+        case nowPlaying = "Player"
     }
 
-    var filteredSongs: [Song] {
-        if searchText.isEmpty {
-            return vm.songs
-        }
+    private var filteredSongs: [Song] {
+        guard !searchText.isEmpty else { return vm.songs }
         return vm.songs.filter {
             $0.title.localizedCaseInsensitiveContains(searchText) ||
             $0.artist.localizedCaseInsensitiveContains(searchText)
         }
     }
 
+    private var filteredAlbums: [Album] {
+        guard !searchText.isEmpty else { return vm.albums }
+        return vm.albums.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Top toolbar
-            ClassicToolbarView(vm: vm, searchText: $searchText)
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.10, green: 0.07, blue: 0.05), Color(red: 0.05, green: 0.03, blue: 0.02)],
+                startPoint: .top, endPoint: .bottom
+            ).ignoresSafeArea()
 
-            Divider()
+            VStack(spacing: 0) {
+                IPadHeaderBar(selectedTab: $selectedTab, searchText: $searchText)
 
-            // Main content
-            HStack(spacing: 0) {
-                // Sidebar
-                ClassicSidebarView(
-                    selected: $selectedSidebarItem,
-                    songCount: vm.songs.count
-                )
-
-                Divider()
-
-                // Content area
-                VStack(spacing: 0) {
-                    // Column headers
-                    ClassicColumnHeaderView()
-
-                    Divider()
-
-                    // Song list
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(filteredSongs.enumerated()), id: \.offset) { index, song in
-                                ClassicSongRowView(
-                                    song: song,
-                                    index: index,
-                                    isSelected: selectedSongIndex == index,
-                                    isPlaying: vm.currentSong.title == song.title && vm.currentSong.artist == song.artist && vm.isPlaying,
-                                    isEven: index % 2 == 0
-                                )
-                                .onTapGesture {
-                                    selectedSongIndex = index
-                                }
-                                .simultaneousGesture(
-                                    TapGesture(count: 2).onEnded {
-                                        vm.playSong(at: index)
-                                    }
-                                )
-                            }
+                ScrollView {
+                    Group {
+                        switch selectedTab {
+                        case .songs:
+                            IPadSongGrid(songs: filteredSongs, vm: vm)
+                        case .albums:
+                            IPadAlbumGrid(albums: filteredAlbums)
+                        case .nowPlaying:
+                            IPadNowPlayingPanel(vm: vm)
                         }
                     }
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 20)
                 }
+
+                IPadMiniPlayer(vm: vm)
             }
-
-            Divider()
-
-            // Bottom playback bar
-            ClassicPlaybackBarView(vm: vm)
         }
-        .background(Color(red: 0.93, green: 0.93, blue: 0.93))
+        .preferredColorScheme(.dark)
     }
 }
 
-// MARK: - Classic Toolbar
+private let iPadAccent = Color(red: 0.95, green: 0.55, blue: 0.15)
+private let iPadAccentDeep = Color(red: 0.78, green: 0.38, blue: 0.08)
+private let iPadCardBG = Color(red: 0.16, green: 0.12, blue: 0.09)
+private let iPadCardBGRaised = Color(red: 0.21, green: 0.16, blue: 0.12)
 
-struct ClassicToolbarView: View {
-    @ObservedObject var vm: RetroPlayerViewModel
+struct IPadHeaderBar: View {
+    @Binding var selectedTab: ClassicManagerView.GridTab
     @Binding var searchText: String
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Playback controls
-            HStack(spacing: 4) {
-                Button(action: { vm.previousTrack() }) {
-                    Image(systemName: "backward.end.fill")
-                        .font(.system(size: 14))
-                }
-                .buttonStyle(ClassicButtonStyle())
-
-                Button(action: { vm.togglePlayPause() }) {
-                    Image(systemName: vm.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 14))
-                }
-                .buttonStyle(ClassicButtonStyle())
-
-                Button(action: { vm.nextTrack() }) {
-                    Image(systemName: "forward.end.fill")
-                        .font(.system(size: 14))
-                }
-                .buttonStyle(ClassicButtonStyle())
+        HStack(spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "radio.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(iPadAccent)
+                Text("iRetroMusic")
+                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .foregroundColor(Color(red: 0.95, green: 0.92, blue: 0.85))
+                    .tracking(0.5)
             }
 
-            // Volume
+            Spacer()
+
             HStack(spacing: 6) {
-                Image(systemName: "speaker.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(.gray)
-                Slider(value: $vm.volume, in: 0...1)
-                    .frame(width: 100)
-                    .tint(.gray)
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(.gray)
-            }
-
-            Spacer()
-
-            // Now Playing display
-            if vm.isPlaying || vm.progress > 0 {
-                VStack(spacing: 2) {
-                    Text(vm.currentSong.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .lineLimit(1)
-                    Text(vm.currentSong.artist)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                    // Progress
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.gray.opacity(0.3))
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.blue)
-                                .frame(width: vm.currentSong.duration > 0
-                                    ? geo.size.width * min(1, vm.progress / vm.currentSong.duration)
-                                    : 0)
-                        }
-                    }
-                    .frame(height: 4)
-                }
-                .frame(width: 220)
-            }
-
-            Spacer()
-
-            // Search bar
-            HStack(spacing: 4) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11))
-                    .foregroundColor(.gray)
-                TextField("Search", text: $searchText)
-                    .font(.system(size: 12))
-                    .textFieldStyle(.plain)
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray)
+                ForEach(ClassicManagerView.GridTab.allCases, id: \.self) { tab in
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.18)) { selectedTab = tab }
+                    }) {
+                        Text(tab.rawValue)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(selectedTab == tab ? .white : Color(white: 0.65))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(
+                                        selectedTab == tab
+                                            ? AnyShapeStyle(LinearGradient(
+                                                colors: [iPadAccent, iPadAccentDeep],
+                                                startPoint: .top, endPoint: .bottom))
+                                            : AnyShapeStyle(Color.clear)
+                                    )
+                            )
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.white)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.gray.opacity(0.4), lineWidth: 1)
-            )
-            .frame(width: 180)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.88, green: 0.88, blue: 0.90),
-                    Color(red: 0.78, green: 0.78, blue: 0.80),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-    }
-}
-
-// MARK: - Classic Button Style
-
-struct ClassicButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundColor(.primary)
-            .frame(width: 32, height: 26)
+            .padding(4)
             .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(
-                        LinearGradient(
-                            colors: configuration.isPressed
-                                ? [Color(white: 0.7), Color(white: 0.7)]
-                                : [Color(white: 0.95), Color(white: 0.82)],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(iPadCardBG)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-            )
-    }
-}
-
-// MARK: - Classic Sidebar
-
-struct ClassicSidebarView: View {
-    @Binding var selected: ClassicManagerView.SidebarItem
-    let songCount: Int
-
-    private let sidebarItems: [(icon: String, item: ClassicManagerView.SidebarItem)] = [
-        ("music.note", .songs),
-        ("square.stack", .albums),
-        ("person.2.fill", .artists),
-        ("guitars.fill", .genres),
-        ("clock.fill", .recentlyAdded),
-    ]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Library header
-            Text("LIBRARY")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.gray)
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 6)
-
-            ForEach(sidebarItems, id: \.item) { entry in
-                HStack(spacing: 8) {
-                    Image(systemName: entry.icon)
-                        .font(.system(size: 12))
-                        .foregroundColor(selected == entry.item ? .white : .blue)
-                        .frame(width: 18)
-                    Text(entry.item.rawValue)
-                        .font(.system(size: 13))
-                        .foregroundColor(selected == entry.item ? .white : .primary)
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    selected == entry.item
-                        ? RoundedRectangle(cornerRadius: 6).fill(Color.blue)
-                        : RoundedRectangle(cornerRadius: 6).fill(Color.clear)
-                )
-                .padding(.horizontal, 6)
-                .onTapGesture { selected = entry.item }
-            }
 
             Spacer()
 
-            // Song count
-            Text("\(songCount) songs")
-                .font(.system(size: 10))
-                .foregroundColor(.gray)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 12)
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(white: 0.55))
+                TextField("", text: $searchText, prompt: Text("Search").foregroundColor(Color(white: 0.45)))
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(white: 0.92))
+                    .textFieldStyle(.plain)
+                if !searchText.isEmpty {
+                    Button(action: { searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(white: 0.55))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(iPadCardBG)
+            )
+            .frame(width: 220)
         }
-        .frame(width: 180)
-        .background(Color(red: 0.90, green: 0.91, blue: 0.92))
-    }
-}
-
-// MARK: - Column Header
-
-struct ClassicColumnHeaderView: View {
-    var body: some View {
-        HStack(spacing: 0) {
-            Text("")
-                .frame(width: 30)
-            Text("Name")
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Divider().frame(height: 16)
-            Text("Artist")
-                .frame(width: 200, alignment: .leading)
-                .padding(.leading, 8)
-            Divider().frame(height: 16)
-            Text("Time")
-                .frame(width: 60, alignment: .trailing)
-                .padding(.trailing, 12)
-        }
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundColor(.secondary)
-        .padding(.vertical, 6)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 14)
         .background(
             LinearGradient(
-                colors: [Color(white: 0.95), Color(white: 0.88)],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(red: 0.10, green: 0.07, blue: 0.05), Color(red: 0.07, green: 0.05, blue: 0.04)],
+                startPoint: .top, endPoint: .bottom
             )
         )
-    }
-}
-
-// MARK: - Song Row
-
-struct ClassicSongRowView: View {
-    let song: Song
-    let index: Int
-    let isSelected: Bool
-    let isPlaying: Bool
-    let isEven: Bool
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // Play indicator
-            ZStack {
-                if isPlaying {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 9))
-                        .foregroundColor(isSelected ? .white : .blue)
-                }
-            }
-            .frame(width: 30)
-
-            // Artwork + Title
-            HStack(spacing: 8) {
-                if let url = song.artworkURL {
-                    AsyncImage(url: url) { image in
-                        image.resizable()
-                    } placeholder: {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.gray.opacity(0.2))
-                    }
-                    .frame(width: 28, height: 28)
-                    .cornerRadius(3)
-                } else {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.gray.opacity(0.15))
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: 10))
-                                .foregroundColor(.gray.opacity(0.5))
-                        )
-                }
-                Text(song.title)
-                    .font(.system(size: 13))
-                    .foregroundColor(isSelected ? .white : .primary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Artist
-            Text(song.artist)
-                .font(.system(size: 13))
-                .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
-                .frame(width: 200, alignment: .leading)
-                .padding(.leading, 8)
-                .lineLimit(1)
-
-            // Duration
-            Text(formatDuration(song.duration))
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
-                .frame(width: 60, alignment: .trailing)
-                .padding(.trailing, 12)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            isSelected
-                ? Color.blue
-                : (isEven ? Color(white: 0.96) : Color.white)
+        .overlay(
+            Rectangle()
+                .fill(Color.black.opacity(0.6))
+                .frame(height: 1),
+            alignment: .bottom
         )
     }
+}
 
-    private func formatDuration(_ secs: Double) -> String {
-        let m = Int(secs) / 60
-        let s = Int(secs) % 60
-        return String(format: "%d:%02d", m, s)
+struct IPadSongGrid: View {
+    let songs: [Song]
+    @ObservedObject var vm: RetroPlayerViewModel
+
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 18)]
+    }
+
+    var body: some View {
+        if songs.isEmpty {
+            EmptyStateView(message: "No tracks found")
+        } else {
+            LazyVGrid(columns: columns, spacing: 18) {
+                ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                    SongCard(
+                        song: song,
+                        isPlaying: vm.currentSong.title == song.title
+                            && vm.currentSong.artist == song.artist
+                            && vm.isPlaying
+                    )
+                    .onTapGesture {
+                        if let i = vm.songs.firstIndex(where: { $0.id == song.id }) {
+                            vm.playSong(at: i)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-// MARK: - Playback Bar (Bottom)
+struct SongCard: View {
+    let song: Song
+    let isPlaying: Bool
 
-struct ClassicPlaybackBarView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .topTrailing) {
+                Group {
+                    if let url = song.artworkURL {
+                        AsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Rectangle().fill(iPadCardBGRaised)
+                        }
+                    } else {
+                        Rectangle()
+                            .fill(iPadCardBGRaised)
+                            .overlay(
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 36))
+                                    .foregroundColor(Color(white: 0.45))
+                            )
+                    }
+                }
+                .aspectRatio(1, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                if isPlaying {
+                    HStack(spacing: 3) {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("PLAYING")
+                            .font(.system(size: 8, weight: .black, design: .rounded))
+                            .tracking(0.5)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(LinearGradient(
+                            colors: [iPadAccent, iPadAccentDeep],
+                            startPoint: .top, endPoint: .bottom))
+                    )
+                    .padding(8)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(song.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(white: 0.95))
+                    .lineLimit(1)
+                Text(song.artist)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(white: 0.6))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 4)
+            .padding(.bottom, 4)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(iPadCardBG)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isPlaying ? iPadAccent.opacity(0.6) : Color.white.opacity(0.04), lineWidth: 1)
+        )
+    }
+}
+
+struct IPadAlbumGrid: View {
+    let albums: [Album]
+
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 22)]
+    }
+
+    var body: some View {
+        if albums.isEmpty {
+            EmptyStateView(message: "No albums found")
+        } else {
+            LazyVGrid(columns: columns, spacing: 22) {
+                ForEach(albums) { album in
+                    AlbumCard(album: album)
+                }
+            }
+        }
+    }
+}
+
+struct AlbumCard: View {
+    let album: Album
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Group {
+                if let url = album.artworkURL {
+                    AsyncImage(url: url) { image in
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle().fill(iPadCardBGRaised)
+                    }
+                } else {
+                    Rectangle()
+                        .fill(iPadCardBGRaised)
+                        .overlay(
+                            Image(systemName: "square.stack.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(Color(white: 0.45))
+                        )
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(album.title)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(white: 0.95))
+                    .lineLimit(1)
+                if !album.year.isEmpty {
+                    Text(album.year)
+                        .font(.system(size: 11))
+                        .foregroundColor(iPadAccent)
+                }
+            }
+        }
+    }
+}
+
+struct IPadNowPlayingPanel: View {
     @ObservedObject var vm: RetroPlayerViewModel
 
     var body: some View {
-        HStack(spacing: 16) {
-            // Artwork
-            if let url = vm.currentSong.artworkURL {
-                AsyncImage(url: url) { image in
-                    image.resizable()
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.2))
+        VStack(spacing: 24) {
+            Spacer(minLength: 20)
+
+            ZStack {
+                Group {
+                    if let url = vm.currentSong.artworkURL {
+                        AsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Rectangle().fill(iPadCardBGRaised)
+                        }
+                    } else {
+                        Rectangle()
+                            .fill(iPadCardBGRaised)
+                            .overlay(
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 80))
+                                    .foregroundColor(Color(white: 0.4))
+                            )
+                    }
                 }
-                .frame(width: 40, height: 40)
-                .cornerRadius(4)
-            } else {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.gray.opacity(0.15))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Image(systemName: "music.note")
-                            .foregroundColor(.gray)
-                    )
+                .frame(width: 320, height: 320)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.6), radius: 24, y: 12)
             }
 
-            // Song info
+            VStack(spacing: 6) {
+                Text(vm.currentSong.title)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(white: 0.95))
+                Text(vm.currentSong.artist)
+                    .font(.system(size: 15))
+                    .foregroundColor(Color(white: 0.65))
+            }
+
+            VStack(spacing: 6) {
+                GeometryReader { geo in
+                    let fraction = vm.currentSong.duration > 0
+                        ? min(1, vm.progress / vm.currentSong.duration)
+                        : 0
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.12))
+                            .frame(height: 4)
+                        Capsule()
+                            .fill(LinearGradient(
+                                colors: [iPadAccent, iPadAccentDeep],
+                                startPoint: .leading, endPoint: .trailing))
+                            .frame(width: geo.size.width * fraction, height: 4)
+                    }
+                }
+                .frame(height: 4)
+
+                HStack {
+                    Text(vm.formatTime(vm.progress))
+                    Spacer()
+                    Text("-\(vm.formatTime(max(0, vm.currentSong.duration - vm.progress)))")
+                }
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(Color(white: 0.55))
+            }
+            .frame(maxWidth: 380)
+
+            HStack(spacing: 28) {
+                IPadCircleButton(icon: "backward.fill", size: 44) { vm.previousTrack() }
+                IPadCircleButton(icon: vm.isPlaying ? "pause.fill" : "play.fill",
+                                 size: 64, prominent: true) { vm.togglePlayPause() }
+                IPadCircleButton(icon: "forward.fill", size: 44) { vm.nextTrack() }
+            }
+
+            Spacer(minLength: 20)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct IPadCircleButton: View {
+    let icon: String
+    var size: CGFloat = 44
+    var prominent: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(
+                        prominent
+                            ? AnyShapeStyle(LinearGradient(
+                                colors: [iPadAccent, iPadAccentDeep],
+                                startPoint: .top, endPoint: .bottom))
+                            : AnyShapeStyle(iPadCardBG)
+                    )
+                    .frame(width: size, height: size)
+                    .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: size * 0.42, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct IPadMiniPlayer: View {
+    @ObservedObject var vm: RetroPlayerViewModel
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Group {
+                if let url = vm.currentSong.artworkURL {
+                    AsyncImage(url: url) { image in
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle().fill(iPadCardBGRaised)
+                    }
+                } else {
+                    Rectangle()
+                        .fill(iPadCardBGRaised)
+                        .overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: 16))
+                                .foregroundColor(Color(white: 0.5))
+                        )
+                }
+            }
+            .frame(width: 48, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(vm.currentSong.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(white: 0.95))
                     .lineLimit(1)
                 Text(vm.currentSong.artist)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(white: 0.6))
                     .lineLimit(1)
             }
-            .frame(width: 200, alignment: .leading)
+            .frame(maxWidth: 240, alignment: .leading)
 
-            // Time
-            Text(vm.formatTime(vm.progress))
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary)
-
-            // Progress bar
             GeometryReader { geo in
+                let fraction = vm.currentSong.duration > 0
+                    ? min(1, vm.progress / vm.currentSong.duration)
+                    : 0
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.gray.opacity(0.3))
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.blue)
-                        .frame(width: vm.currentSong.duration > 0
-                            ? geo.size.width * min(1, vm.progress / vm.currentSong.duration)
-                            : 0)
+                    Capsule().fill(Color.white.opacity(0.10))
+                    Capsule()
+                        .fill(LinearGradient(
+                            colors: [iPadAccent, iPadAccentDeep],
+                            startPoint: .leading, endPoint: .trailing))
+                        .frame(width: geo.size.width * fraction)
                 }
             }
-            .frame(height: 4)
+            .frame(height: 3)
+            .frame(maxWidth: .infinity)
 
-            Text("-\(vm.formatTime(max(0, vm.currentSong.duration - vm.progress)))")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary)
+            HStack(spacing: 14) {
+                Button(action: { vm.previousTrack() }) {
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(Color(white: 0.85))
+                }
+                .buttonStyle(.plain)
 
-            // Shuffle / Repeat
-            Button(action: {}) {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                Button(action: { vm.togglePlayPause() }) {
+                    Image(systemName: vm.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(iPadAccent)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { vm.nextTrack() }) {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(Color(white: 0.85))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-
-            Button(action: {}) {
-                Image(systemName: "repeat")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
-            }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 12)
         .background(
             LinearGradient(
-                colors: [
-                    Color(red: 0.88, green: 0.88, blue: 0.90),
-                    Color(red: 0.82, green: 0.82, blue: 0.84),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(red: 0.10, green: 0.07, blue: 0.05), Color(red: 0.07, green: 0.05, blue: 0.04)],
+                startPoint: .top, endPoint: .bottom
             )
         )
+        .overlay(
+            Rectangle()
+                .fill(Color.black.opacity(0.6))
+                .frame(height: 1),
+            alignment: .top
+        )
+    }
+}
+
+struct EmptyStateView: View {
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "music.note.list")
+                .font(.system(size: 40))
+                .foregroundColor(Color(white: 0.35))
+            Text(message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color(white: 0.5))
+        }
+        .frame(maxWidth: .infinity, minHeight: 240)
     }
 }
 
@@ -996,7 +1258,7 @@ struct ScreenView: View {
             StatusBarView(title: vm.screenTitle, isPlaying: vm.isPlaying)
 
             ZStack {
-                Color.white
+                LCD.panel
 
                 switch vm.currentScreen {
                 case .main, .music, .extras, .games, .settings:
@@ -1046,49 +1308,53 @@ struct ScreenView: View {
     }
 }
 
-// MARK: - Status Bar
+// MARK: - LCD palette (cassette-deck amber on dark brown)
+
+enum LCD {
+    static let ink = Color(red: 0.16, green: 0.11, blue: 0.05)        // text on the cream panel
+    static let inkDim = Color(red: 0.45, green: 0.36, blue: 0.24)     // secondary text
+    static let panel = Color(red: 0.95, green: 0.93, blue: 0.80)      // cream LCD background
+    static let amber = Color(red: 0.98, green: 0.78, blue: 0.32)
+    static let amberDeep = Color(red: 0.85, green: 0.42, blue: 0.10)
+    static let header = Color(red: 0.20, green: 0.12, blue: 0.05)
+    static let cursor = LinearGradient(
+        colors: [Color(red: 0.95, green: 0.55, blue: 0.15), Color(red: 0.78, green: 0.38, blue: 0.08)],
+        startPoint: .top, endPoint: .bottom
+    )
+    static let none = LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom)
+    static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
+    }
+}
+
+// MARK: - Status Bar (tape-deck header: left-aligned title, transport state on the right)
 
 struct StatusBarView: View {
     let title: String
     let isPlaying: Bool
 
     var body: some View {
-        HStack {
-            if isPlaying {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 8))
-            }
-            Spacer()
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-            Spacer()
-            HStack(spacing: 1) {
-                RoundedRectangle(cornerRadius: 1)
-                    .stroke(Color.black, lineWidth: 0.5)
-                    .frame(width: 18, height: 9)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 0.5)
-                            .fill(Color.green.opacity(0.8))
-                            .padding(1.5)
-                    )
-                Rectangle()
-                    .fill(Color.black)
-                    .frame(width: 1.5, height: 4)
+        HStack(spacing: 6) {
+            Text(title.uppercased())
+                .font(LCD.mono(10, .bold))
+                .tracking(1.2)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(isPlaying ? Color(red: 0.95, green: 0.25, blue: 0.10) : LCD.amber.opacity(0.35))
+                    .frame(width: 5, height: 5)
+                Text(isPlaying ? "PLAY" : "STOP")
+                    .font(LCD.mono(9, .heavy))
+                Text("TAPE A")
+                    .font(LCD.mono(8, .semibold))
+                    .foregroundColor(LCD.amber.opacity(0.7))
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.75, green: 0.78, blue: 0.82),
-                    Color(red: 0.65, green: 0.68, blue: 0.72),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .foregroundColor(.black)
+        .padding(.vertical, 5)
+        .background(LCD.header)
+        .foregroundColor(LCD.amber)
     }
 }
 
@@ -1099,37 +1365,69 @@ struct MenuListView: View {
     let selectedIndex: Int
     let showChevron: Bool
 
-    private let highlightGradient = LinearGradient(
-        colors: [Color(red: 0.2, green: 0.45, blue: 0.9), Color(red: 0.15, green: 0.35, blue: 0.8)],
-        startPoint: .top, endPoint: .bottom
-    )
-    private let clearGradient = LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom)
-
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 let selected = index == selectedIndex
-                HStack(spacing: 8) {
+                LCDRow(selected: selected) {
                     Image(systemName: item.1)
-                        .font(.system(size: 12))
-                        .frame(width: 20)
-                        .foregroundColor(selected ? .white : .gray)
-                    Text(item.0)
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(selected ? .white : .black)
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 18)
+                        .foregroundColor(selected ? LCD.ink : LCD.inkDim)
+                    Text(item.0.uppercased())
+                        .font(LCD.mono(13, .semibold))
+                        .tracking(0.8)
+                        .foregroundColor(LCD.ink)
                     Spacer()
-                    if showChevron {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(selected ? .white : .gray)
+                    if showChevron && selected {
+                        Text("OK")
+                            .font(LCD.mono(8, .heavy))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(LCD.ink, lineWidth: 1))
+                            .foregroundColor(LCD.ink)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(selected ? highlightGradient : clearGradient)
             }
             Spacer()
         }
+        .padding(.top, 2)
+    }
+}
+
+/// One line of the cassette-deck LCD: a "▶" cursor marks the selected row, rows are separated by a
+/// dotted rule, and the selected row sits on an amber bar.
+struct LCDRow<Content: View>: View {
+    let selected: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text(selected ? "\u{25B6}" : " ")
+                    .font(LCD.mono(9, .heavy))
+                    .foregroundColor(LCD.ink)
+                    .frame(width: 10)
+                content()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .background(selected ? LCD.cursor : LCD.none)
+            Line()
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [1, 2]))
+                .foregroundColor(LCD.ink.opacity(0.25))
+                .frame(height: 1)
+                .padding(.horizontal, 8)
+        }
+    }
+}
+
+struct Line: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return p
     }
 }
 
@@ -1139,53 +1437,41 @@ struct SongListScreenView: View {
     let songs: [Song]
     let selectedIndex: Int
 
-    private let highlightGradient = LinearGradient(
-        colors: [Color(red: 0.2, green: 0.45, blue: 0.9), Color(red: 0.15, green: 0.35, blue: 0.8)],
-        startPoint: .top, endPoint: .bottom
-    )
-    private let clearGradient = LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom)
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
                         let selected = index == selectedIndex
-                        HStack(spacing: 6) {
-                            // Artwork thumbnail
+                        LCDRow(selected: selected) {
+                            Text(String(format: "%02d", index + 1))
+                                .font(LCD.mono(9, .bold))
+                                .foregroundColor(LCD.inkDim)
                             if let url = song.artworkURL {
                                 AsyncImage(url: url) { image in
                                     image.resizable()
                                 } placeholder: {
                                     RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color.gray.opacity(0.3))
+                                        .fill(LCD.ink.opacity(0.15))
                                 }
-                                .frame(width: 22, height: 22)
+                                .frame(width: 20, height: 20)
                                 .cornerRadius(2)
-                            } else {
-                                Image(systemName: "music.note")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(selected ? .white : .gray)
-                                    .frame(width: 22, height: 22)
                             }
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(song.title)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(selected ? .white : .black)
+                                    .font(LCD.mono(12, .semibold))
+                                    .foregroundColor(LCD.ink)
                                     .lineLimit(1)
-                                Text(song.artist)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(selected ? .white.opacity(0.8) : .gray)
+                                Text(song.artist.uppercased())
+                                    .font(LCD.mono(8))
+                                    .foregroundColor(selected ? LCD.ink.opacity(0.8) : LCD.inkDim)
                                     .lineLimit(1)
                             }
                             Spacer()
                             Text(formatDuration(song.duration))
-                                .font(.system(size: 10))
-                                .foregroundColor(selected ? .white.opacity(0.8) : .gray)
+                                .font(LCD.mono(9))
+                                .foregroundColor(selected ? LCD.ink.opacity(0.8) : LCD.inkDim)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(selected ? highlightGradient : clearGradient)
                         .id(index)
                     }
                 }
@@ -1211,51 +1497,39 @@ struct AlbumListScreenView: View {
     let albums: [Album]
     let selectedIndex: Int
 
-    private let highlightGradient = LinearGradient(
-        colors: [Color(red: 0.2, green: 0.45, blue: 0.9), Color(red: 0.15, green: 0.35, blue: 0.8)],
-        startPoint: .top, endPoint: .bottom
-    )
-    private let clearGradient = LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom)
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     ForEach(Array(albums.enumerated()), id: \.offset) { index, album in
                         let selected = index == selectedIndex
-                        HStack(spacing: 6) {
+                        LCDRow(selected: selected) {
                             if let url = album.artworkURL {
                                 AsyncImage(url: url) { image in
                                     image.resizable()
                                 } placeholder: {
                                     RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color.gray.opacity(0.3))
+                                        .fill(LCD.ink.opacity(0.15))
                                 }
-                                .frame(width: 22, height: 22)
+                                .frame(width: 20, height: 20)
                                 .cornerRadius(2)
                             } else {
                                 Image(systemName: "square.stack")
                                     .font(.system(size: 10))
-                                    .foregroundColor(selected ? .white : .gray)
-                                    .frame(width: 22, height: 22)
+                                    .foregroundColor(LCD.inkDim)
+                                    .frame(width: 20, height: 20)
                             }
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(album.title)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(selected ? .white : .black)
+                                    .font(LCD.mono(12, .semibold))
+                                    .foregroundColor(LCD.ink)
                                     .lineLimit(1)
                                 Text(album.year)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(selected ? .white.opacity(0.8) : .gray)
+                                    .font(LCD.mono(8))
+                                    .foregroundColor(selected ? LCD.ink.opacity(0.8) : LCD.inkDim)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11))
-                                .foregroundColor(selected ? .white : .gray)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(selected ? highlightGradient : clearGradient)
                         .id(index)
                     }
                 }
@@ -1269,130 +1543,135 @@ struct AlbumListScreenView: View {
     }
 }
 
-// MARK: - Now Playing Screen
+// MARK: - Now Playing Screen (cassette label: artwork left, track info right, block meters below)
 
 struct NowPlayingScreenView: View {
     @ObservedObject var vm: RetroPlayerViewModel
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Text("\(currentTrackIndex + 1) of \(vm.songs.count)")
-                    .font(.system(size: 9))
-                    .foregroundColor(.gray)
-                Spacer()
+        VStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
+                artwork
+                    .frame(width: 74, height: 74)
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .overlay(RoundedRectangle(cornerRadius: 3).stroke(LCD.ink, lineWidth: 1.5))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("TRK \(String(format: "%02d", currentTrackIndex + 1))/\(String(format: "%02d", max(vm.songs.count, 1)))")
+                        Text("SIDE A")
+                    }
+                    .font(LCD.mono(8, .heavy))
+                    .foregroundColor(LCD.inkDim)
+
+                    Text(vm.currentSong.title)
+                        .font(LCD.mono(13, .bold))
+                        .foregroundColor(LCD.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                    Text(vm.currentSong.artist.uppercased())
+                        .font(LCD.mono(9))
+                        .foregroundColor(LCD.inkDim)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    HStack(spacing: 4) {
+                        Image(systemName: vm.isPlaying ? "play.fill" : "pause.fill")
+                            .font(.system(size: 7, weight: .black))
+                        Text(vm.isPlaying ? "PLAYING" : "PAUSED")
+                            .font(LCD.mono(8, .heavy))
+                    }
+                    .foregroundColor(LCD.amberDeep)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 74)
             }
             .padding(.horizontal, 10)
-            .padding(.top, 4)
+            .padding(.top, 8)
 
-            // Album art — real artwork or fallback
-            if let url = vm.currentSong.artworkURL {
-                AsyncImage(url: url) { image in
-                    image.resizable().aspectRatio(1, contentMode: .fit)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.2))
-                        .aspectRatio(1, contentMode: .fit)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: 28))
-                                .foregroundColor(.gray.opacity(0.5))
-                        )
-                }
-                .frame(maxHeight: 110)
-                .cornerRadius(4)
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                .padding(.horizontal, 40)
-            } else if !vm.currentSong.artwork.isEmpty {
-                Image(vm.currentSong.artwork)
-                    .resizable()
-                    .aspectRatio(1, contentMode: .fit)
-                    .frame(maxHeight: 110)
-                    .cornerRadius(4)
-                    .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                    .padding(.horizontal, 40)
-            } else {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: 110, height: 110)
-                    .overlay(
-                        Image(systemName: "music.note")
-                            .font(.system(size: 28))
-                            .foregroundColor(.gray.opacity(0.5))
-                    )
-            }
+            Line()
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [1, 2]))
+                .foregroundColor(LCD.ink.opacity(0.3))
+                .frame(height: 1)
+                .padding(.horizontal, 10)
 
-            VStack(spacing: 1) {
-                Text(vm.currentSong.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.black)
-                    .lineLimit(1)
-                Text(vm.currentSong.artist)
-                    .font(.system(size: 11))
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-            }
-            .padding(.top, 2)
-
-            // Progress bar
-            VStack(spacing: 2) {
-                GeometryReader { geo in
-                    let fraction = vm.currentSong.duration > 0
-                        ? min(1, vm.progress / vm.currentSong.duration)
-                        : 0
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 4)
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color(red: 0.2, green: 0.45, blue: 0.9))
-                            .frame(width: geo.size.width * fraction, height: 4)
-                        Circle()
-                            .fill(Color(red: 0.2, green: 0.45, blue: 0.9))
-                            .frame(width: 8, height: 8)
-                            .offset(x: max(0, (geo.size.width - 8) * fraction))
-                    }
-                }
-                .frame(height: 8)
-
+            // Block-style tape counter
+            VStack(spacing: 3) {
                 HStack {
                     Text(vm.formatTime(vm.progress))
                     Spacer()
+                    Text("COUNTER")
+                    Spacer()
                     Text("-\(vm.formatTime(max(0, vm.currentSong.duration - vm.progress)))")
                 }
-                .font(.system(size: 9))
-                .foregroundColor(.gray)
+                .font(LCD.mono(9, .bold))
+                .foregroundColor(LCD.ink)
+
+                BlockMeter(fraction: vm.currentSong.duration > 0 ? min(1, vm.progress / vm.currentSong.duration) : 0,
+                           blocks: 24, height: 9, fill: LCD.amberDeep)
             }
             .padding(.horizontal, 10)
-            .padding(.top, 2)
 
-            // Volume bar
-            HStack(spacing: 4) {
-                Image(systemName: "speaker.fill")
-                    .font(.system(size: 7))
-                    .foregroundColor(.gray)
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 3)
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color.gray.opacity(0.6))
-                            .frame(width: geo.size.width * vm.volume, height: 3)
-                    }
-                }
-                .frame(height: 3)
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.system(size: 7))
-                    .foregroundColor(.gray)
+            // Volume as a short block meter
+            HStack(spacing: 6) {
+                Text("VOL")
+                    .font(LCD.mono(8, .heavy))
+                    .foregroundColor(LCD.inkDim)
+                BlockMeter(fraction: vm.volume, blocks: 12, height: 6, fill: LCD.ink.opacity(0.7))
+                    .frame(width: 110)
+                Spacer()
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 6)
         }
     }
 
+    @ViewBuilder
+    private var artwork: some View {
+        if let url = vm.currentSong.artworkURL {
+            AsyncImage(url: url) { image in
+                image.resizable().aspectRatio(1, contentMode: .fill)
+            } placeholder: {
+                artworkPlaceholder
+            }
+        } else if !vm.currentSong.artwork.isEmpty, UIImage(named: vm.currentSong.artwork) != nil {
+            Image(vm.currentSong.artwork)
+                .resizable()
+                .aspectRatio(1, contentMode: .fill)
+        } else {
+            artworkPlaceholder
+        }
+    }
+
+    private var artworkPlaceholder: some View {
+        ZStack {
+            LCD.ink.opacity(0.08)
+            CassetteReel(angle: 0)
+                .scaleEffect(1.2)
+                .opacity(0.6)
+        }
+    }
+
     private var currentTrackIndex: Int {
         vm.songs.firstIndex(where: { $0.title == vm.currentSong.title && $0.artist == vm.currentSong.artist }) ?? 0
+    }
+}
+
+/// A segmented LED/LCD-style meter made of discrete blocks.
+struct BlockMeter: View {
+    let fraction: Double
+    var blocks: Int = 20
+    var height: CGFloat = 8
+    var fill: Color = LCD.amberDeep
+
+    var body: some View {
+        let lit = Int((fraction * Double(blocks)).rounded(.down))
+        HStack(spacing: 2) {
+            ForEach(0..<blocks, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(i < lit ? fill : LCD.ink.opacity(0.12))
+            }
+        }
+        .frame(height: height)
     }
 }
 
@@ -1404,154 +1683,30 @@ struct AboutScreenView: View {
     var body: some View {
         VStack(spacing: 8) {
             Spacer()
-            Image(systemName: "music.note.house.fill")
+            Image(systemName: "radio.fill")
                 .font(.system(size: 32))
-                .foregroundColor(.gray)
-            Text("RetroPlayer")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.black)
-            Text("Version 1.0")
-                .font(.system(size: 11))
-                .foregroundColor(.gray)
-            Text("A retro portable\nmusic player simulator")
-                .font(.system(size: 10))
-                .foregroundColor(.gray)
+                .foregroundColor(Color(red: 0.78, green: 0.40, blue: 0.10))
+            Text("iRetroMusic")
+                .font(LCD.mono(15, .bold))
+                .foregroundColor(LCD.ink)
+            Text("VERSION 1.0")
+                .font(LCD.mono(9))
+                .foregroundColor(LCD.inkDim)
+            Text("A cassette-era\nportable music player")
+                .font(LCD.mono(9))
+                .foregroundColor(LCD.inkDim)
                 .multilineTextAlignment(.center)
             HStack(spacing: 4) {
                 Circle()
                     .fill(musicAuthorized ? Color.green : Color.orange)
                     .frame(width: 6, height: 6)
                 Text(musicAuthorized ? "Apple Music Connected" : "Apple Music Not Connected")
-                    .font(.system(size: 9))
-                    .foregroundColor(.gray)
+                    .font(LCD.mono(8))
+                    .foregroundColor(LCD.inkDim)
             }
             .padding(.top, 4)
             Spacer()
         }
-    }
-}
-
-// MARK: - Click Wheel
-
-struct ClickWheelView: View {
-    let onScroll: (Int) -> Void
-    let onCenter: () -> Void
-    let onMenu: () -> Void
-    let onPlay: () -> Void
-    let onNext: () -> Void
-    let onPrevious: () -> Void
-
-    @State private var lastAngle: Double?
-    @State private var accumulatedAngle: Double = 0
-    private let scrollThreshold: Double = 18
-
-    private let wheelSize: CGFloat = 210
-    private var centerSize: CGFloat { wheelSize * 0.36 }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(white: 0.82), Color(white: 0.76)],
-                        center: .center,
-                        startRadius: 40,
-                        endRadius: 105
-                    )
-                )
-                .frame(width: wheelSize, height: wheelSize)
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-
-            Circle()
-                .stroke(Color.black.opacity(0.06), lineWidth: 1)
-                .frame(width: wheelSize * 0.72)
-
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(white: 0.95), Color(white: 0.88)],
-                        center: .center,
-                        startRadius: 5,
-                        endRadius: 40
-                    )
-                )
-                .frame(width: centerSize, height: centerSize)
-                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
-                .onTapGesture { onCenter() }
-
-            Text("MENU")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundColor(Color(white: 0.4))
-                .offset(y: -wheelSize * 0.33)
-
-            Image(systemName: "playpause.fill")
-                .font(.system(size: 12))
-                .foregroundColor(Color(white: 0.4))
-                .offset(y: wheelSize * 0.33)
-
-            Image(systemName: "backward.end.fill")
-                .font(.system(size: 12))
-                .foregroundColor(Color(white: 0.4))
-                .offset(x: -wheelSize * 0.33)
-
-            Image(systemName: "forward.end.fill")
-                .font(.system(size: 12))
-                .foregroundColor(Color(white: 0.4))
-                .offset(x: wheelSize * 0.33)
-        }
-        .contentShape(Circle())
-        .gesture(
-            DragGesture(minimumDistance: 8)
-                .onChanged { value in
-                    let center = CGPoint(x: wheelSize / 2, y: wheelSize / 2)
-                    let dx = value.location.x - center.x
-                    let dy = value.location.y - center.y
-                    let distance = sqrt(dx * dx + dy * dy)
-                    guard distance > centerSize / 2 else { return }
-
-                    let angle = atan2(dy, dx) * 180 / .pi
-                    if let last = lastAngle {
-                        var delta = angle - last
-                        if delta > 180 { delta -= 360 }
-                        if delta < -180 { delta += 360 }
-                        accumulatedAngle += delta
-                        if accumulatedAngle >= scrollThreshold {
-                            onScroll(1)
-                            accumulatedAngle = 0
-                        } else if accumulatedAngle <= -scrollThreshold {
-                            onScroll(-1)
-                            accumulatedAngle = 0
-                        }
-                    }
-                    lastAngle = angle
-                }
-                .onEnded { _ in
-                    lastAngle = nil
-                    accumulatedAngle = 0
-                }
-        )
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                .onEnded { value in
-                    let travel = abs(value.translation.width) + abs(value.translation.height)
-                    guard travel < 8 else { return }
-
-                    let center = CGPoint(x: wheelSize / 2, y: wheelSize / 2)
-                    let dx = value.location.x - center.x
-                    let dy = value.location.y - center.y
-                    let distance = sqrt(dx * dx + dy * dy)
-
-                    if distance < centerSize / 2 {
-                        onCenter()
-                    } else if distance < wheelSize / 2 {
-                        if abs(dy) > abs(dx) {
-                            if dy < 0 { onMenu() } else { onPlay() }
-                        } else {
-                            if dx < 0 { onPrevious() } else { onNext() }
-                        }
-                    }
-                }
-        )
     }
 }
 

@@ -1,0 +1,59 @@
+default_platform(:ios)
+
+APP_ID   = "com.johnseong.MusicPlayer"
+USERNAME = "wonmor@yahoo.com"
+TEAM_ID  = "Z64KRUX3W3"
+
+def connect_login
+  Spaceship::ConnectAPI.login(USERNAME, nil, use_portal: false, use_tunes: true, tunes_team_id: TEAM_ID)
+end
+
+platform :ios do
+  desc "Show recent builds and version state"
+  lane :status do
+    connect_login
+    app = Spaceship::ConnectAPI::App.find(APP_ID)
+    UI.user_error!("App #{APP_ID} not found") unless app
+    Spaceship::ConnectAPI::Build.all(app_id: app.id, sort: "-uploadedDate", limit: 5).each do |b|
+      UI.message("build #{b.version} for #{b.app_version}: #{b.processing_state} uploaded=#{b.uploaded_date}")
+    end
+    app.get_app_store_versions(includes: "appStoreVersionLocalizations").each do |v|
+      UI.message("version #{v.version_string} platform=#{v.platform} state=#{v.app_store_state}")
+    end
+  end
+
+  desc "Scan App Store metadata text for 'iPod' / 'Apple' mentions (read-only)"
+  lane :check_metadata do
+    connect_login
+    app = Spaceship::ConnectAPI::App.find(APP_ID)
+    UI.user_error!("App #{APP_ID} not found") unless app
+    pattern = /ipod|click\s*wheel|cover\s*flow/i
+    found = 0
+    [app.fetch_edit_app_info, app.fetch_live_app_info].compact.uniq { |i| i.id }.each do |info|
+      (info.get_app_info_localizations || []).each do |l|
+        { "name" => l.name, "subtitle" => l.subtitle, "privacyPolicyText" => l.privacy_policy_text }.each do |field, text|
+          next if text.nil? || text.empty?
+          UI.message("appInfo #{l.locale} #{field}: #{text.inspect}") if field != "privacyPolicyText"
+          if text =~ pattern
+            found += 1
+            UI.important("MATCH appInfo #{l.locale} #{field}: #{text}")
+          end
+        end
+      end
+    end
+    app.get_app_store_versions(includes: "appStoreVersionLocalizations").each do |v|
+      (v.app_store_version_localizations || []).each do |l|
+        { "description" => l.description, "keywords" => l.keywords, "promotionalText" => l.promotional_text,
+          "whatsNew" => l.whats_new, "marketingUrl" => l.marketing_url, "supportUrl" => l.support_url }.each do |field, text|
+          next if text.nil? || text.empty?
+          UI.message("version #{v.version_string} #{l.locale} #{field} (#{text.length} chars)")
+          text.to_s.scan(/[^.\n]*(?:ipod|click\s*wheel|cover\s*flow)[^.\n]*/i).each do |s|
+            found += 1
+            UI.important("MATCH version #{v.version_string} #{l.locale} #{field}: #{s.strip}")
+          end
+        end
+      end
+    end
+    UI.success("Metadata scan complete: #{found} match(es)")
+  end
+end

@@ -307,7 +307,7 @@ struct VortexGameView: View {
                         Text("VORTEX")
                             .font(.system(size: 16, weight: .black, design: .monospaced))
                             .foregroundColor(.white)
-                        Text("Press Select to Launch")
+                        Text("Press OK to Launch")
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.gray)
                         if game.score > 0 {
@@ -326,7 +326,7 @@ struct VortexGameView: View {
                         Text("Score: \(game.score)")
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
-                        Text("Press Select to Restart")
+                        Text("Press OK to Restart")
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.gray)
                     }
@@ -340,7 +340,7 @@ struct VortexGameView: View {
                         Text("Score: \(game.score)")
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
-                        Text("Press Select to Play Again")
+                        Text("Press OK to Play Again")
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.gray)
                     }
@@ -349,7 +349,7 @@ struct VortexGameView: View {
         }
         .onAppear {
             game.resetGame()
-            // Wire up click wheel to game
+            // Wire up the navigation buttons to the game
             vm.gameScrollHandler = { [weak game] direction in
                 if direction > 0 {
                     game?.movePaddleRight()

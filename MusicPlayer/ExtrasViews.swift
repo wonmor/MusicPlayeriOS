@@ -52,19 +52,23 @@ struct ClockScreenView: View {
                     .fill(Color.red)
                     .frame(width: 6, height: 6)
             }
+            .frame(width: 120, height: 120)
+            .scaleEffect(0.75)
+            .frame(width: 90, height: 90)
 
             // Digital time
             Text(timeString)
-                .font(.system(size: 24, weight: .light, design: .monospaced))
+                .font(.system(size: 20, weight: .medium, design: .monospaced))
                 .foregroundColor(.black)
 
             // Date
             Text(dateString)
-                .font(.system(size: 11))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundColor(.gray)
 
             Spacer()
         }
+        .padding(.vertical, 4)
         .onReceive(timer) { _ in
             currentTime = Date()
         }
@@ -120,7 +124,7 @@ struct StopwatchScreenView: View {
                 .padding(.top, 12)
 
             // Status
-            Text(isRunning ? "Running" : (elapsed > 0 ? "Stopped" : "Press Select"))
+            Text(isRunning ? "Running" : (elapsed > 0 ? "Stopped" : "Press OK"))
                 .font(.system(size: 10))
                 .foregroundColor(.gray)
 
@@ -129,7 +133,7 @@ struct StopwatchScreenView: View {
                 VStack(spacing: 2) {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 8))
-                        .foregroundColor(Color(red: 0.2, green: 0.45, blue: 0.9))
+                        .foregroundColor(Color(red: 0.85, green: 0.42, blue: 0.10))
                     Text(isRunning ? "Lap" : (elapsed > 0 ? "Reset" : "Start"))
                         .font(.system(size: 8))
                         .foregroundColor(.gray)
@@ -345,7 +349,7 @@ struct SolitaireGameView: View {
                         Text("Moves: \(game.moves)")
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
-                        Text("Press Select to Play Again")
+                        Text("Press OK to Play Again")
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.gray)
                     }
@@ -433,7 +437,7 @@ class QuizGameState: ObservableObject {
     @Published var gameOver: Bool = false
 
     let questions: [QuizQuestion] = [
-        QuizQuestion(question: "What year was the Walkman released?", options: ["1975", "1979", "1982", "1985"], correctIndex: 1),
+        QuizQuestion(question: "What year did the first portable cassette player go on sale?", options: ["1975", "1979", "1982", "1985"], correctIndex: 1),
         QuizQuestion(question: "How many keys on a standard piano?", options: ["76", "82", "88", "92"], correctIndex: 2),
         QuizQuestion(question: "Which instrument has 6 strings?", options: ["Violin", "Guitar", "Bass", "Banjo"], correctIndex: 1),
         QuizQuestion(question: "What does BPM stand for?", options: ["Bars Per Measure", "Beats Per Minute", "Bass Power Mode", "Band Performance Mix"], correctIndex: 1),
@@ -507,7 +511,7 @@ struct QuizGameView: View {
                          game.score >= game.questions.count / 2 ? "Good job!" : "Try again!")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.gray)
-                    Text("Press Select to Restart")
+                    Text("Press OK to Restart")
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundColor(.gray)
                         .padding(.top, 8)
@@ -578,7 +582,7 @@ struct QuizGameView: View {
                     .padding(.horizontal, 8)
 
                     if game.answered {
-                        Text("Press Select to continue")
+                        Text("Press OK to continue")
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.gray)
                             .padding(.top, 4)
