@@ -1,66 +1,21 @@
 # iRetroMusic
 
-A cassette-era portable music player for iOS, built entirely in SwiftUI. Features a cassette-deck style tactile-button interface, hierarchical menu system, Apple Music playback, and classic retro games.
+A mixtape maker and hi-fi cassette deck for iPhone, in SwiftUI.
 
-## Screenshots
+- **Record tapes**: choose C46, C60 or C90, label the tape, pick a shell colour and record songs from the device's music library onto side A and side B. Each side only holds half the running time; songs that don't fit aren't recorded.
+- **Play them on the deck**: REW, PLAY, F.FWD, STOP and FLIP piano keys, a three-digit tape counter, reels whose tape packs grow and shrink with the side's progress (constant tape speed, so the emptier reel turns faster), auto-reverse, a vacuum-fluorescent display and VU meters.
+- **Shelf**: every tape is kept as a cassette spine; touch and hold to edit, duplicate or delete.
+- **Demo Tape**: three short original instrumentals synthesised by `scripts/demotape.py`, bundled so the deck plays before the user records anything.
 
-| Main Menu | Now Playing | Clock |
-|---|---|---|
-| ![Main Menu](screenshots/iphone/01-main-menu.png) | ![Now Playing](screenshots/iphone/02-now-playing.png) | ![Clock](screenshots/iphone/03-clock.png) |
+## Code
 
-| Stopwatch | Vortex | Quiz |
-|---|---|---|
-| ![Stopwatch](screenshots/iphone/04-stopwatch.png) | ![Vortex](screenshots/iphone/05-vortex.png) | ![Quiz](screenshots/iphone/06-quiz.png) |
+- `Models.swift`: tracks, tape formats, shells, tapes, the shelf (JSON in Documents) and the demo tape.
+- `Deck.swift`: music-library access (MediaPlayer) and the deck engine (system music player for library songs, AVAudioPlayer for the demo tape).
+- `DeckView.swift`: cassette, counter, display, meters, keys, running order.
+- `ShelfView.swift`: shelf, tape editor and song picker.
+- `ScreenshotData.swift`: Debug-only store-screenshot fixtures (`-ui-shot deck|shelf|about|demo|sideb`).
 
-## Features
-
-### Cassette Deck Tactile Controls
-- **Up / Down** — scroll through menus
-- **OK** — select / confirm
-- **BACK** — return to previous menu
-- **Prev / Play-Pause / Next** — transport row for playback control
-- Haptic feedback on every interaction
-- Animated cassette-tape window that spins while playing
-
-### Music Player
-- Browse your Apple Music library by song or album
-- Now Playing screen with album artwork, progress bar, and volume indicator
-- Track-to-track advancement and shuffle mode
-- Real playback via MusicKit
-
-### Retro Games
-- **Vortex** — a brick-breaker game controlled by the navigation buttons
-- **Solitaire** — card-matching memory game
-- **Quiz** — music trivia
-- **Clock** and **Stopwatch** utilities
-
-### Device Aesthetic
-- Warm orange-and-cream cassette-player body with embossed brand strip
-- Vintage-LCD-tinted screen with cassette-style "REC / STBY" status indicator
-- Tactile dark-plastic buttons with press animation
-- iPad layout: tabbed card-grid library (Tracks / Albums / Player) with mini-player bar
-
-## Requirements
-
-- iOS 18.5+
-- Xcode 16.0+
-- Swift 5.9+
-
-## Getting Started
-
-1. Clone the repository
-2. Open `MusicPlayer.xcodeproj` in Xcode
-3. Build and run on a simulator or device
-
-## Architecture
-
-- **SwiftUI** — entire UI layer
-- **Combine** — reactive state management and timers
-- **MusicKit** — Apple Music library access and playback
-- **MVVM** — `RetroPlayerViewModel` manages all navigation, playback, and menu state
-- `ContentView.swift` contains the device shell, controls, and screen views
-- `ExtrasViews.swift` contains Clock, Stopwatch, Solitaire, and Quiz
-- `VortexGameView.swift` contains the brick-breaker game engine
+Requires iOS 18.5+. Contact: john@orchestrsim.com
 
 ## License
 
